@@ -102,6 +102,7 @@ def triage_incident(
     vitals: str,
     scenario_name: str = "",
     api_key: Optional[str] = None,
+    image: Optional[any] = None,
 ) -> dict:
     api_key = api_key or os.getenv("GEMINI_API_KEY")
 
@@ -122,22 +123,31 @@ Location: {location}
 Symptoms: {symptoms}
 Vitals: {vitals}
 
+If an image is provided, focus on Computer Vision analysis for Search & Rescue:
+- Identify signs of distress.
+- Detect people or landmarks.
+- Recommend specific SAR equipment.
+
 JSON format:
 {{
   "severity": "CRITICAL|HIGH|MODERATE|LOW",
   "severity_score": <1-10 integer>,
-  "primary_diagnosis": "<suspected condition>",
+  "primary_diagnosis": "<suspected condition or SAR status>",
   "protocol": "<protocol name>",
   "supplies": ["<supply1>", "<supply2>", ...],
   "drone_payload": ["<compact label1>", ...],
   "telemedicine_required": <true/false>,
   "estimated_stabilization_time": "<X minutes>",
-  "clinician_notes": "<brief clinical guidance>",
+  "clinician_notes": "<brief clinical guidance or SAR coordinates>",
   "ambulance_eta_min": <estimated rural ambulance ETA in minutes>,
   "drone_eta_seconds": <estimated drone flight 120-420 seconds>
 }}"""
 
-        response = model.generate_content(prompt)
+        if image:
+            response = model.generate_content([prompt, image])
+        else:
+            response = model.generate_content(prompt)
+
         text = response.text.strip()
         text = re.sub(r"^```(?:json)?\n?", "", text)
         text = re.sub(r"\n?```$", "", text)

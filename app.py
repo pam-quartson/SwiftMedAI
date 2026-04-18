@@ -13,6 +13,7 @@ import streamlit as st
 from dotenv import load_dotenv
 
 sys.path.insert(0, str(Path(__file__).parent))
+from PIL import Image
 from backend.drone_simulator import DRONE_BASE, DroneSimulator
 from backend.gemini_triage import DEMO_RESPONSES, triage_incident
 from backend.omnicell import UNLOCK_SEQUENCE, PayloadCabinet, PayloadState
@@ -32,19 +33,21 @@ st.markdown(
     """
 <style>
 /* Dark theme base */
-.stApp { background-color: #0a0e1a; color: #e8eaf6; }
-section[data-testid="stSidebar"] { background-color: #0d1120; border-right: 1px solid #1e2d4d; }
+.stApp { background-color: #05070a; color: #e8eaf6; }
+section[data-testid="stSidebar"] { background-color: #080c14; border-right: 1px solid #1e2d4d; }
 .block-container { padding-top: 1.5rem; }
 
-/* Metric cards */
+/* Glassmorphism Metric cards */
 [data-testid="metric-container"] {
-    background: #141928;
-    border: 1px solid #1e2d4d;
-    border-radius: 10px;
+    background: rgba(20, 25, 40, 0.6);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(30, 45, 77, 0.5);
+    border-radius: 12px;
     padding: 14px !important;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 [data-testid="stMetricLabel"] { color: #8892a4 !important; }
-[data-testid="stMetricValue"] { color: #e8eaf6 !important; }
+[data-testid="stMetricValue"] { color: #00d4ff !important; font-weight: 800; }
 
 /* Severity badges */
 .badge {
@@ -61,13 +64,15 @@ section[data-testid="stSidebar"] { background-color: #0d1120; border-right: 1px 
 .badge-MODERATE { background: linear-gradient(135deg,#ffcc00,#cc9900); color:#111; }
 .badge-LOW      { background: linear-gradient(135deg,#00aa44,#007730); color:#fff; }
 
-/* Cards */
+/* Glassmorphism Info Cards */
 .info-card {
-    background: #141928;
-    border: 1px solid #1e2d4d;
+    background: rgba(20, 25, 40, 0.5);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(30, 45, 77, 0.4);
     border-radius: 12px;
     padding: 16px 20px;
     margin-bottom: 14px;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
 }
 .card-title {
     color: #00d4ff;
@@ -81,56 +86,81 @@ section[data-testid="stSidebar"] { background-color: #0d1120; border-right: 1px 
 /* Mission phase list */
 .phase { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: 0.9em; }
 .phase-dot-done    { width:10px; height:10px; border-radius:50%; background:#00ff88; flex-shrink:0; }
-.phase-dot-active  { width:10px; height:10px; border-radius:50%; background:#00d4ff; flex-shrink:0; animation:pulse 1s infinite; }
+.phase-dot-active  { width:10px; height:10px; border-radius:50%; background:#00d4ff; flex-shrink:0; animation:pulse 1.5s infinite; }
 .phase-dot-pending { width:10px; height:10px; border-radius:50%; background:#2a3555; flex-shrink:0; }
-@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
 
 /* Scenario buttons */
 div[data-testid="column"] button[kind="primary"] {
-    background: linear-gradient(135deg, #1a2540, #0d1628) !important;
-    border: 1px solid #1e3a6e !important;
+    background: linear-gradient(135deg, rgba(26, 37, 64, 0.8), rgba(13, 22, 40, 0.8)) !important;
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(30, 58, 110, 0.6) !important;
     border-radius: 12px !important;
     font-weight: 600 !important;
     color: #c8d8ff !important;
-    height: 90px !important;
-    transition: all 0.2s !important;
+    height: 100px !important;
+    transition: all 0.3s ease !important;
 }
 div[data-testid="column"] button[kind="primary"]:hover {
     border-color: #00d4ff !important;
     color: #00d4ff !important;
-    box-shadow: 0 0 16px rgba(0,212,255,0.2) !important;
+    box-shadow: 0 0 20px rgba(0,212,255,0.3) !important;
+    transform: translateY(-2px);
 }
 
 /* Omnicell state */
 .omnicell-state {
-    background: #141928;
+    background: rgba(20, 25, 40, 0.7);
     border-radius: 10px;
     padding: 14px 18px;
     border-left: 4px solid;
     font-weight: 700;
-    font-size: 1em;
+    font-size: 1.1em;
     letter-spacing: 0.5px;
 }
 
 /* Approve button */
 div[data-testid="stButton"] button[kind="secondary"] {
-    background: linear-gradient(135deg, #003d1a, #005524) !important;
-    border: 1px solid #00aa44 !important;
-    color: #00ff88 !important;
-    font-weight: 700 !important;
+    background: linear-gradient(135deg, #005524, #007a33) !important;
+    border: 1px solid #00ff88 !important;
+    color: #ffffff !important;
+    font-weight: 800 !important;
     border-radius: 8px !important;
+    letter-spacing: 1px;
+    box-shadow: 0 4px 14px rgba(0, 255, 136, 0.2) !important;
 }
 
 /* Progress bar */
-.stProgress > div > div > div { background: linear-gradient(90deg, #00d4ff, #00ff88) !important; }
+.stProgress > div > div > div { background: linear-gradient(90deg, #00d4ff, #00ff88) !important; height: 8px !important; border-radius: 4px !important; }
 
 /* Dividers */
-hr { border-color: #1e2d4d !important; }
+hr { border-color: rgba(30, 45, 77, 0.5) !important; }
 
 /* Header */
-.main-header { text-align:center; padding: 8px 0 16px; }
-.main-title { font-size:2.2em; font-weight:900; background: linear-gradient(135deg,#00d4ff,#00ff88); -webkit-background-clip:text; -webkit-text-fill-color:transparent; letter-spacing:-0.5px; }
-.main-sub { color:#8892a4; font-size:0.95em; margin-top:4px; }
+.main-header { text-align:center; padding: 12px 0 24px; border-bottom: 1px solid rgba(0, 212, 255, 0.1); margin-bottom: 2rem; }
+.main-title { font-size:2.8em; font-weight:900; background: linear-gradient(135deg,#00d4ff,#00ff88); -webkit-background-clip:text; -webkit-text-fill-color:transparent; letter-spacing:-1px; }
+.main-sub { color:#8892a4; font-size:1.1em; margin-top:8px; font-weight:500; }
+
+/* Command Center feed */
+.vision-feed {
+    border: 2px solid #1e2d4d;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+    background: #000;
+}
+.vision-overlay {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: rgba(0,0,0,0.6);
+    color: #00d4ff;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.8em;
+    border-left: 3px solid #00d4ff;
+}
 </style>
 """,
     unsafe_allow_html=True,
@@ -138,6 +168,19 @@ hr { border-color: #1e2d4d !important; }
 
 # ── DEMO SCENARIOS ─────────────────────────────────────────────────────────────
 SCENARIOS = {
+    "Search and Rescue (SAR)": {
+        "icon": "🛰️",
+        "label": "Search and Rescue",
+        "subtitle": "Missing Hiker · Oakland Hills · SAR-1 Drone",
+        "location": "Redwood Regional Park, Oakland Hills (37.8075°N, 122.1943°W)",
+        "coords": [37.8075, -122.1943],
+        "symptoms": (
+            "Missing hiker reported 4 hours ago. Suspected dehydration or fall. "
+            "Drone-view analysis required for visual identification."
+        ),
+        "vitals": "N/A — Search phase active",
+        "color": "#00d4ff",
+    },
     "Rural Heart Attack": {
         "icon": "❤️",
         "label": "Rural Heart Attack",
@@ -426,16 +469,16 @@ def main():
         st.divider()
         st.markdown(
             """
-<div style="color:#8892a4;font-size:0.75em;font-weight:700;letter-spacing:2px">COMPETITIVE EDGE</div>
-<div style="margin-top:10px;font-size:0.85em;color:#c8d8ff;line-height:1.8">
-  <div>🚁 Sub-5 min drone response</div>
-  <div>🧠 Gemini AI real-time triage</div>
-  <div>✅ Live clinical authorization</div>
-  <div>💊 Omnicell secure payload</div>
-  <div>📡 Telemedicine link active</div>
-  <div>🌍 Works in remote/rural zones</div>
+<div style="color:#8892a4;font-size:0.75em;font-weight:700;letter-spacing:2px">COMPETITIVE POSITIONING</div>
+<div style="margin-top:10px;font-size:0.85em;color:#c8d8ff;line-height:1.6">
+  <div style="margin-bottom:8px"><b>Zipline:</b> Logistical. Optimized for pre-scheduled delivery.</div>
+  <div style="margin-bottom:8px"><b>Motorola:</b> Dispatches drones with cameras.</div>
+  <div style="margin-bottom:8px; color:#00ff88"><b>SwiftMedAI:</b> High-stakes reactive dispatch + AI triage + Clinician-led authorization.</div>
 </div>
-<div style="margin-top:16px;color:#4a5568;font-size:0.75em">vs. Zipline Ghana: SwiftMedAI adds<br/>AI triage + live auth + Omnicell</div>
+<div style="margin-top:16px;color:#8892a4;font-size:0.75em;font-weight:700;letter-spacing:2px">MARKET CONTEXT</div>
+<div style="margin-top:8px;font-size:0.8em;color:#8892a4;">
+  Medical drones market projected to reach <b>$2.8B by 2032</b>. EMS networks account for 47% of revenue. SwiftMedAI captures the highest-value segment: <b>Immediate Intervention</b>.
+</div>
 """,
             unsafe_allow_html=True,
         )
@@ -514,17 +557,32 @@ def main():
 
         # Triage
         if stage == "triaging":
-            with st.spinner("🧠 Gemini AI Triage in progress..."):
-                result = triage_incident(
-                    symptoms=sc["symptoms"],
-                    location=sc["location"],
-                    vitals=sc["vitals"],
-                    scenario_name=scenario_key,
-                    api_key=os.getenv("GEMINI_API_KEY"),
-                )
-            st.session_state.triage = result
-            st.session_state.stage = "triage_done"
-            st.rerun()
+            img_file = None
+            if scenario_key == "Search and Rescue (SAR)":
+                st.markdown('<div class="card-title">Drone SAR Vision Feed</div>', unsafe_allow_html=True)
+                img_file = st.file_uploader("Upload Drone Search Imagery", type=["jpg", "jpeg", "png"])
+                if img_file:
+                    st.image(img_file, caption="Analyzing Drone Feed...", use_container_width=True)
+            
+            trigger_triage = True
+            if scenario_key == "Search and Rescue (SAR)" and not img_file:
+                trigger_triage = False
+                st.warning("Please upload drone imagery to initiate SAR triage.")
+
+            if trigger_triage:
+                with st.spinner("🧠 Gemini AI Triage in progress..."):
+                    pil_img = Image.open(img_file) if img_file else None
+                    result = triage_incident(
+                        symptoms=sc["symptoms"],
+                        location=sc["location"],
+                        vitals=sc["vitals"],
+                        scenario_name=scenario_key,
+                        api_key=os.getenv("GEMINI_API_KEY"),
+                        image=pil_img,
+                    )
+                st.session_state.triage = result
+                st.session_state.stage = "triage_done"
+                st.rerun()
 
         if stage in ("triage_done", "approved", "flying", "landed", "unlocking", "complete"):
             triage = st.session_state.triage
@@ -626,7 +684,8 @@ def main():
 
         elif stage in ("approved", "flying"):
             # ─── FLIGHT ANIMATION ────────────────────────────────────────────
-            sim = DroneSimulator(incident_coords=incident_coords)
+            m_type = "search" if scenario_key == "Search and Rescue (SAR)" else "medical"
+            sim = DroneSimulator(incident_coords=incident_coords, mission_type=m_type)
             st.session_state.sim = sim
 
             eta_slot = st.empty()
