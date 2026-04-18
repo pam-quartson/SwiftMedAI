@@ -17,6 +17,7 @@ from PIL import Image
 from backend.drone_simulator import DRONE_BASE, DroneSimulator
 from backend.gemini_triage import DEMO_RESPONSES, triage_incident
 from backend.omnicell import UNLOCK_SEQUENCE, PayloadCabinet, PayloadState
+from backend.911_simulator import stream_transcript, SCENARIO_TRANSCRIPTS
 
 load_dotenv()
 
@@ -161,6 +162,28 @@ hr { border-color: rgba(30, 45, 77, 0.5) !important; }
     font-size: 0.8em;
     border-left: 3px solid #00d4ff;
 }
+
+/* Audio Wave Visualizer */
+.waveform {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  height: 40px;
+  margin: 10px 0;
+}
+.bar {
+  width: 3px;
+  height: 10px;
+  background: #00d4ff;
+  border-radius: 2px;
+  animation: pulse-wave 1.2s ease-in-out infinite;
+}
+.bar:nth-child(2) { animation-delay: 0.1s; }
+.bar:nth-child(3) { animation-delay: 0.2s; }
+.bar:nth-child(4) { animation-delay: 0.3s; }
+.bar:nth-child(5) { animation-delay: 0.4s; }
+@keyframes pulse-wave { 0%, 100% { height: 10px; } 50% { height: 35px; } }
 </style>
 """,
     unsafe_allow_html=True,
@@ -232,6 +255,7 @@ CLINICIANS = [
 ]
 
 PHASES = [
+    "911 Call",
     "Incident Detected",
     "AI Triage",
     "Clinical Authorization",
@@ -241,14 +265,15 @@ PHASES = [
 ]
 
 PHASE_MAP = {
-    "idle":      0,
-    "triaging":  1,
-    "triage_done": 2,
-    "approved":  3,
-    "flying":    3,
-    "landed":    4,
-    "unlocking": 4,
-    "complete":  5,
+    "idle":        0,
+    "calling":     0,
+    "triaging":    2,
+    "triage_done": 3,
+    "approved":    4,
+    "flying":      4,
+    "landed":      5,
+    "unlocking":   5,
+    "complete":    6,
 }
 
 
@@ -261,6 +286,7 @@ def init_state():
         "auth_code": None,
         "sim": None,
         "auto_approve": True,
+        "call_transcript": [],
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -522,7 +548,7 @@ def main():
                 label = f"{sc['icon']} {sc['label']}\n{sc['subtitle']}"
                 if st.button(label, use_container_width=True, type="primary", key=f"sc_{idx}"):
                     st.session_state.scenario_key = key
-                    st.session_state.stage = "triaging"
+                    st.session_state.stage = "calling"
                     st.rerun()
 
     # ── MAIN LAYOUT ───────────────────────────────────────────────────────────
@@ -544,9 +570,42 @@ def main():
 
     # ── LEFT PANEL ────────────────────────────────────────────────────────────
     with left:
-        # Incident card
-        st.markdown(
-            f"""
+        # ─── 911 CALL SIMULATION ──────────────────────────────────────────────
+        if stage == "calling":
+            st.markdown(
+                """
+<div class="info-card">
+  <div class="card-title">Live Communication Feed — 911 DISPATCH</div>
+  <div class="waveform">
+    <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+    <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+    <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+  </div>
+  <div id="transcript-box" style="height:140px; overflow-y:auto; border-left:1px solid #1e2d4d; padding-left:12px; font-family:monospace; font-size:0.85em;">
+""",
+                unsafe_allow_html=True,
+            )
+            
+            transcript_placeholder = st.empty()
+            full_text = ""
+            
+            for speaker, phrase in stream_transcript(scenario_key):
+                color = "#00d4ff" if speaker == "DISPATCHER" else "#ffcc00"
+                line = f'<div style="margin-bottom:6px"><span style="color:{color};font-weight:700">{speaker}:</span> {phrase}</div>'
+                full_text += line
+                transcript_placeholder.markdown(full_text, unsafe_allow_html=True)
+            
+            st.markdown("</div></div>", unsafe_allow_html=True)
+            st.info("💡 AI Triage engine is analyzing the live audio stream...")
+            time.sleep(2.0)
+            
+            st.session_state.stage = "triaging"
+            st.rerun()
+
+        # Incident card (only show after call)
+        if stage not in ("idle", "calling"):
+            st.markdown(
+                f"""
 <div class="info-card">
   <div class="card-title">Active Incident — {sc['label']}</div>
   <div style="display:flex;gap:8px;margin-bottom:10px">
@@ -561,8 +620,8 @@ def main():
   <div style="color:#8892a4;font-size:0.78em;margin-bottom:4px">VITALS</div>
   <div style="color:#ffcc00;font-size:0.85em;font-family:monospace">{sc['vitals']}</div>
 </div>""",
-            unsafe_allow_html=True,
-        )
+                unsafe_allow_html=True,
+            )
 
         # Triage
         if stage == "triaging":
