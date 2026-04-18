@@ -469,15 +469,24 @@ def main():
         st.divider()
         st.markdown(
             """
-<div style="color:#8892a4;font-size:0.75em;font-weight:700;letter-spacing:2px">COMPETITIVE POSITIONING</div>
-<div style="margin-top:10px;font-size:0.85em;color:#c8d8ff;line-height:1.6">
-  <div style="margin-bottom:8px"><b>Zipline:</b> Logistical. Optimized for pre-scheduled delivery.</div>
-  <div style="margin-bottom:8px"><b>Motorola:</b> Dispatches drones with cameras.</div>
-  <div style="margin-bottom:8px; color:#00ff88"><b>SwiftMedAI:</b> High-stakes reactive dispatch + AI triage + Clinician-led authorization.</div>
-</div>
-<div style="margin-top:16px;color:#8892a4;font-size:0.75em;font-weight:700;letter-spacing:2px">MARKET CONTEXT</div>
-<div style="margin-top:8px;font-size:0.8em;color:#8892a4;">
-  Medical drones market projected to reach <b>$2.8B by 2032</b>. EMS networks account for 47% of revenue. SwiftMedAI captures the highest-value segment: <b>Immediate Intervention</b>.
+<div style="color:#8892a4;font-size:0.75em;font-weight:700;letter-spacing:2px;margin-bottom:12px">MARKET POSITIONING</div>
+<style>
+.comp-table { width:100%; border-collapse:collapse; font-size:0.75em; color:#c8d8ff; }
+.comp-table th { text-align:left; color:#8892a4; padding:4px; border-bottom:1px solid #1e2d4d; }
+.comp-table td { padding:8px 4px; border-bottom:1px solid #1e2d4d; }
+.check { color:#00ff88; font-weight:bold; }
+.cross { color:#ff4444; opacity:0.5; }
+</style>
+<table class="comp-table">
+  <tr><th>Feature</th><th>Zipline</th><th>SwiftMed</th></tr>
+  <tr><td>Logistics</td><td class="check">✓</td><td class="check">✓</td></tr>
+  <tr><td>911 Reactive</td><td class="cross">✗</td><td class="check">✓</td></tr>
+  <tr><td>AI Triage</td><td class="cross">✗</td><td class="check">✓</td></tr>
+  <tr><td>Live Clinic</td><td class="cross">✗</td><td class="check">✓</td></tr>
+  <tr><td>SAR Vision</td><td class="cross">✗</td><td class="check">✓</td></tr>
+</table>
+<div style="margin-top:16px;color:#8892a4;font-size:0.7em;line-height:1.4">
+  <b>Position:</b> Zipline is a delivery company. SwiftMedAI is a <b>Digital First Responder</b>.
 </div>
 """,
             unsafe_allow_html=True,
@@ -562,7 +571,27 @@ def main():
                 st.markdown('<div class="card-title">Drone SAR Vision Feed</div>', unsafe_allow_html=True)
                 img_file = st.file_uploader("Upload Drone Search Imagery", type=["jpg", "jpeg", "png"])
                 if img_file:
-                    st.image(img_file, caption="Analyzing Drone Feed...", use_container_width=True)
+                    st.markdown(
+                        f"""
+<div class="vision-feed">
+  <div class="vision-overlay">SCANNING... [AI ACTIVE]<br/>ALT: 400FT | SAT: LOCK</div>
+  <style>
+    .detection-box {{
+        position: absolute;
+        border: 2px solid #00ff88;
+        background: rgba(0, 255, 136, 0.1);
+        color: #00ff88;
+        font-family: monospace;
+        font-size: 0.7em;
+        padding: 2px 4px;
+        animation: blink 1s infinite;
+    }}
+    @keyframes blink {{ 0%, 100% {{ opacity: 1; }} 50% {{ opacity: 0.5; }} }}
+  </style>
+</div>""",
+                        unsafe_allow_html=True,
+                    )
+                    st.image(img_file, use_container_width=True)
             
             trigger_triage = True
             if scenario_key == "Search and Rescue (SAR)" and not img_file:
