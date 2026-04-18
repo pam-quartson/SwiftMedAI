@@ -1,3 +1,5 @@
 # RubberDuck indexer config (contains auth token)
 .rubberduck/
 .env
+venv/
+__pycache__/

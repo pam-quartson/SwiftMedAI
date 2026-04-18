@@ -33,8 +33,15 @@ class DroneSimulator:
     mission_type: str = "medical"
 
     def __post_init__(self):
+        import random
+        # Base calculation
         self.distance_miles = haversine_miles(self.base_coords, self.incident_coords)
-        self.total_eta_seconds = int((self.distance_miles / DRONE_SPEED_MPH) * 3600)
+        self.raw_eta_seconds = int((self.distance_miles / DRONE_SPEED_MPH) * 3600)
+        
+        # Real-world variance (Wind/Atmosphere) +/- 8%
+        variance = random.uniform(0.92, 1.08)
+        self.total_eta_seconds = int(self.raw_eta_seconds * variance)
+        
         self.heading = calc_heading(self.base_coords, self.incident_coords)
         self.waypoints = self._compute_waypoints()
 
