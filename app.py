@@ -664,7 +664,7 @@ def main():
             "Select an emergency scenario to trigger the live demo →</div>",
             unsafe_allow_html=True,
         )
-        cols = st.columns(3)
+        cols = st.columns(len(SCENARIOS))
         for idx, (key, sc) in enumerate(SCENARIOS.items()):
             with cols[idx]:
                 label = f"{sc['icon']} {sc['label']}\n{sc['subtitle']}"
